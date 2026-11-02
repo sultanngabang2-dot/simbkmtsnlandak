@@ -33,6 +33,23 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printReportArea, #printReportArea * {
+        visibility: visible;
+      }
+      #printReportArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+        background: white;
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
@@ -361,6 +378,25 @@
           </div>
         </div>
 
+        <!-- Bagian Hasil Pemanggilan Siswa & Orang Tua -->
+        <div class="mt-5 pt-4 border-t border-slate-200">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h4 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="phone-call" class="w-4 h-4 text-indigo-700"></i>
+                Riwayat & Hasil Pemanggilan (Siswa / Orang Tua)
+              </h4>
+              <p class="text-[11px] text-slate-500">Hasil berita acara, hasil pemanggilan siswa & orang tua</p>
+            </div>
+            <button onclick="openAddCallLogModal(currentSelectedStudentId)" class="text-xs bg-indigo-700 hover:bg-indigo-600 text-white font-medium px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Catat Hasil Panggilan
+            </button>
+          </div>
+          <div id="callLogsList" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+            <!-- Daftar riwayat & hasil pemanggilan -->
+          </div>
+        </div>
+
         <!-- Bagian Berkas Dokumentasi Home Visit -->
         <div class="mt-5 pt-4 border-t border-slate-200">
           <div class="flex items-center justify-between mb-3">
@@ -381,17 +417,154 @@
         </div>
 
         <!-- Tombol Bawah -->
-        <div class="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center">
-          <button id="btnEditProfileDetails" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition">
-            <i data-lucide="edit-3" class="w-4 h-4 text-emerald-700"></i>
-            Edit Biodata & Absensi Siswa
-          </button>
+        <div class="mt-6 pt-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-2">
+          <div class="flex items-center gap-2">
+            <button id="btnEditProfileDetails" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition">
+              <i data-lucide="edit-3" class="w-4 h-4 text-emerald-700"></i>
+              Edit Biodata Siswa
+            </button>
+            <button onclick="openPrintStudentModal(currentSelectedStudentId)" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-indigo-900 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition">
+              <i data-lucide="printer" class="w-4 h-4 text-indigo-600"></i>
+              Cetak PDF Rekam Kasus
+            </button>
+          </div>
           <button type="button" onclick="closeProfileModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition">
             Tutup
           </button>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ==================== MODAL CATAT HASIL PEMANGGILAN ==================== -->
+  <div id="callLogModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden my-6 transform transition-all">
+      <div class="bg-indigo-800 text-white px-5 py-3.5 flex items-center justify-between">
+        <h3 class="font-semibold text-sm flex items-center gap-1.5">
+          <i data-lucide="phone-call" class="w-4 h-4"></i>
+          Catat Hasil Pemanggilan Siswa / Orang Tua
+        </h3>
+        <button onclick="closeCallLogModal()" class="text-indigo-200 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="callLogForm" onsubmit="saveCallLog(event)" class="p-5 space-y-3.5">
+        <input type="hidden" id="callLogStudentId">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Nama Siswa</label>
+          <input type="text" id="callLogStudentName" disabled class="w-full px-3 py-2 text-sm bg-slate-100 border border-slate-200 rounded-lg text-slate-700 font-medium">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tanggal Pemanggilan *</label>
+            <input type="date" id="callLogDate" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Pihak Yang Dipanggil *</label>
+            <select id="callLogTarget" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-white">
+              <option value="Siswa">Siswa Bersangkutan</option>
+              <option value="Orang Tua / Wali">Orang Tua / Wali</option>
+              <option value="Siswa & Orang Tua">Siswa & Orang Tua Bersama</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Alasan Pemanggilan *</label>
+          <input type="text" id="callLogReason" required placeholder="Contoh: Pembinaan keterlambatan, klarifikasi perkelahian..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Hasil Pemanggilan / Kesepakatan *</label>
+          <textarea id="callLogResult" required rows="3" placeholder="Uraikan hasil pembicaraan, komitmen siswa, kesepakatan wali murid, atau sanksi yang disepakati..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:outline-none"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeCallLogModal()" class="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
+          <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-700 hover:bg-indigo-600 rounded-lg shadow">Simpan Hasil Panggilan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL PILIH FILTER CETAK PDF ==================== -->
+  <div id="printOptionModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden">
+      <div class="bg-indigo-900 text-white px-5 py-3.5 flex items-center justify-between">
+        <h3 class="font-semibold text-sm flex items-center gap-2">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Opsi Cetak PDF Rekam Jejak Siswa
+        </h3>
+        <button onclick="closePrintOptionModal()" class="text-indigo-200 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-2">Pilih Jangkauan Laporan:</label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="printRangeType" value="all" checked onchange="togglePrintMonthFilter(false)" class="text-indigo-600 focus:ring-indigo-500">
+              <div>
+                <span class="text-xs font-bold text-slate-800 block">Keseluruhan Catatan MTs</span>
+                <span class="text-[11px] text-slate-500">Mencetak semua rekam kasus, pemanggilan, dan absensi selama di sekolah</span>
+              </div>
+            </label>
+            <label class="flex items-center gap-2.5 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="printRangeType" value="monthly" onchange="togglePrintMonthFilter(true)" class="text-indigo-600 focus:ring-indigo-500">
+              <div>
+                <span class="text-xs font-bold text-slate-800 block">Berdasarkan Bulanan</span>
+                <span class="text-[11px] text-slate-500">Hanya mencetak kejadian dan pemanggilan pada bulan tertentu</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div id="printMonthSelectorWrapper" class="hidden grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Pilih Bulan</label>
+            <select id="printMonthSelect" class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-medium">
+              <option value="1">Januari</option>
+              <option value="2">Februari</option>
+              <option value="3">Maret</option>
+              <option value="4">April</option>
+              <option value="5">Mei</option>
+              <option value="6">Juni</option>
+              <option value="7">Juli</option>
+              <option value="8">Agustus</option>
+              <option value="9">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Desember</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Pilih Tahun</label>
+            <select id="printYearSelect" class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-medium">
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+              <option value="2027">2027</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closePrintOptionModal()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
+          <button type="button" onclick="executeStudentPrint()" class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-700 hover:bg-indigo-600 rounded-lg shadow inline-flex items-center gap-1.5">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Buka Print / Simpan PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AREA KHUSUS CETAK DOKUMEN LAPORAN INDIVIDUAL SISWA (Print / Save as PDF) -->
+  <div id="printReportArea" class="hidden">
+    <!-- Konten cetak disusun secara dinamis oleh JavaScript -->
   </div>
 
   <!-- ==================== MODAL TAMBAH KASUS BK ==================== -->
@@ -1082,6 +1255,9 @@
       // Riwayat Kasus
       renderProfileCases(std.cases || []);
 
+      // Riwayat Hasil Pemanggilan Siswa & Orang Tua
+      renderProfileCallLogs(std.callLogs || []);
+
       // Berkas Dokumentasi Home Visit
       renderProfileHomeVisitDocs(std.homeVisitDocs || []);
 
@@ -1137,6 +1313,314 @@
         `;
         container.appendChild(item);
       });
+    }
+
+    // ==================== RIWAYAT & HASIL PEMANGGILAN ====================
+    function renderProfileCallLogs(callLogs) {
+      const container = document.getElementById("callLogsList");
+      container.innerHTML = "";
+
+      if (!callLogs || callLogs.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-xs text-slate-400">
+            Belum ada catatan hasil pemanggilan siswa atau orang tua.
+          </div>
+        `;
+        return;
+      }
+
+      const sortedLogs = [...callLogs].reverse();
+      sortedLogs.forEach((log) => {
+        const item = document.createElement("div");
+        item.className = "p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 text-xs";
+        item.innerHTML = `
+          <div class="flex items-center justify-between text-indigo-900 font-semibold mb-1">
+            <span class="flex items-center gap-1">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-600"></i>
+              ${log.date}
+            </span>
+            <span class="px-2 py-0.5 rounded text-[10px] bg-indigo-100 text-indigo-800 border border-indigo-200">
+              Panggilan: ${escapeHtml(log.target)}
+            </span>
+          </div>
+          <p class="text-slate-700 mb-1.5"><strong>Alasan:</strong> ${escapeHtml(log.reason)}</p>
+          <div class="p-2 bg-white rounded border border-indigo-100 text-[11px] text-slate-700">
+            <strong class="text-indigo-800">Hasil Pemanggilan / Kesepakatan:</strong>
+            <p class="mt-0.5 text-slate-600 whitespace-pre-line">${escapeHtml(log.result)}</p>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openAddCallLogModal(studentId) {
+      const std = students.find(s => s.id === studentId);
+      if (!std) return;
+
+      document.getElementById("callLogStudentId").value = std.id;
+      document.getElementById("callLogStudentName").value = `${std.name} (${std.class})`;
+      document.getElementById("callLogForm").reset();
+
+      const today = new Date().toISOString().split("T")[0];
+      document.getElementById("callLogDate").value = today;
+
+      document.getElementById("callLogModal").classList.remove("hidden");
+      document.getElementById("callLogModal").classList.add("flex");
+      lucide.createIcons();
+    }
+
+    function closeCallLogModal() {
+      document.getElementById("callLogModal").classList.add("hidden");
+      document.getElementById("callLogModal").classList.remove("flex");
+    }
+
+    function saveCallLog(event) {
+      event.preventDefault();
+      const stdId = document.getElementById("callLogStudentId").value;
+      const date = document.getElementById("callLogDate").value;
+      const target = document.getElementById("callLogTarget").value;
+      const reason = document.getElementById("callLogReason").value.trim();
+      const result = document.getElementById("callLogResult").value.trim();
+
+      const std = students.find(s => s.id === stdId);
+      if (!std) return;
+
+      if (!std.callLogs) std.callLogs = [];
+
+      std.callLogs.push({
+        id: "call-" + Date.now(),
+        date,
+        target,
+        reason,
+        result
+      });
+
+      // Tambahkan frekuensi pemanggilan otomatis
+      std.calls = (parseInt(std.calls, 10) || 0) + 1;
+
+      saveToLocalStorage();
+      renderTable();
+      updateStatistics();
+      closeCallLogModal();
+      showToast("Hasil pemanggilan berhasil dicatat!");
+
+      if (currentSelectedStudentId === stdId) {
+        openProfileModal(stdId);
+      }
+    }
+
+    // ==================== CETAK PDF REKAM KASUS SISWA ====================
+    let studentIdToPrint = null;
+
+    function openPrintStudentModal(studentId) {
+      studentIdToPrint = studentId || currentSelectedStudentId;
+      if (!studentIdToPrint) return;
+
+      const now = new Date();
+      document.getElementById("printMonthSelect").value = String(now.getMonth() + 1);
+      document.getElementById("printYearSelect").value = String(now.getFullYear());
+      togglePrintMonthFilter(false);
+
+      document.getElementById("printOptionModal").classList.remove("hidden");
+      document.getElementById("printOptionModal").classList.add("flex");
+      lucide.createIcons();
+    }
+
+    function closePrintOptionModal() {
+      document.getElementById("printOptionModal").classList.add("hidden");
+      document.getElementById("printOptionModal").classList.remove("flex");
+    }
+
+    function togglePrintMonthFilter(show) {
+      const wrapper = document.getElementById("printMonthSelectorWrapper");
+      if (show) {
+        wrapper.classList.remove("hidden");
+        wrapper.classList.add("grid");
+      } else {
+        wrapper.classList.add("hidden");
+        wrapper.classList.remove("grid");
+      }
+    }
+
+    function executeStudentPrint() {
+      const std = students.find(s => s.id === studentIdToPrint);
+      if (!std) return;
+
+      const rangeType = document.querySelector('input[name="printRangeType"]:checked').value;
+      const printArea = document.getElementById("printReportArea");
+
+      let filteredCases = std.cases || [];
+      let filteredCallLogs = std.callLogs || [];
+      let filterTitle = "KESELURUHAN SELAMA BERSEKOLAH DI MTs";
+
+      if (rangeType === "monthly") {
+        const monthSelect = document.getElementById("printMonthSelect");
+        const month = parseInt(monthSelect.value, 10);
+        const monthName = monthSelect.options[monthSelect.selectedIndex].text;
+        const year = parseInt(document.getElementById("printYearSelect").value, 10);
+
+        filterTitle = `BULAN ${monthName.toUpperCase()} ${year}`;
+
+        filteredCases = (std.cases || []).filter(c => {
+          if (!c.date) return false;
+          const [yr, mo] = c.date.split("-");
+          return parseInt(mo, 10) === month && parseInt(yr, 10) === year;
+        });
+
+        filteredCallLogs = (std.callLogs || []).filter(c => {
+          if (!c.date) return false;
+          const [yr, mo] = c.date.split("-");
+          return parseInt(mo, 10) === month && parseInt(yr, 10) === year;
+        });
+      }
+
+      const totalAbsen = (Number(std.sakit) || 0) + (Number(std.izin) || 0) + (Number(std.alpa) || 0);
+
+      // Buat template cetak dokumen PDF formal
+      printArea.innerHTML = `
+        <div style="font-family: Arial, sans-serif; color: #111; line-height: 1.4;">
+          <!-- Kop Surat Madrasah -->
+          <div style="text-align: center; border-bottom: 3px double #333; padding-bottom: 10px; margin-bottom: 20px;">
+            <h3 style="margin: 0; font-size: 14pt; font-weight: bold; text-transform: uppercase;">KEMENTERIAN AGAMA REPUBLIK INDONESIA</h3>
+            <h2 style="margin: 3px 0; font-size: 16pt; font-weight: bold; text-transform: uppercase;">MADRASAH TSANAWIYAH NEGERI (MTsN) LANDAK</h2>
+            <p style="margin: 0; font-size: 10pt; color: #444;">Jl. Raya Ngabang, Kabupaten Landak, Kalimantan Barat</p>
+            <p style="margin: 2px 0 0 0; font-size: 10pt; font-weight: bold; color: #047857;">UNIT BIMBINGAN DAN KONSELING (BK)</p>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 18px;">
+            <h4 style="margin: 0; font-size: 13pt; text-decoration: underline; text-transform: uppercase;">LEMBAR REKAM JEJAK & BIMBINGAN SISWA</h4>
+            <p style="margin: 4px 0 0 0; font-size: 10pt; font-weight: bold; color: #555;">PERIODE: ${filterTitle}</p>
+          </div>
+
+          <!-- Identitas Siswa -->
+          <table style="width: 100%; font-size: 10pt; margin-bottom: 18px; border-collapse: collapse;">
+            <tr>
+              <td style="width: 25%; padding: 4px 0; font-weight: bold;">Nama Siswa</td>
+              <td style="width: 2%;">:</td>
+              <td style="width: 43%;">${escapeHtml(std.name)}</td>
+              <td style="width: 15%; font-weight: bold;">Sakit (S)</td>
+              <td style="width: 2%;">:</td>
+              <td style="width: 13%;">${std.sakit || 0} Hari</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold;">Kelas</td>
+              <td>:</td>
+              <td>${escapeHtml(std.class)}</td>
+              <td style="font-weight: bold;">Izin (I)</td>
+              <td>:</td>
+              <td>${std.izin || 0} Hari</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold;">No. HP Orang Tua</td>
+              <td>:</td>
+              <td>${escapeHtml(std.phone || '-')}</td>
+              <td style="font-weight: bold;">Alpa (A)</td>
+              <td>:</td>
+              <td>${std.alpa || 0} Hari</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold;">Alamat</td>
+              <td>:</td>
+              <td>${escapeHtml(std.address || '-')}</td>
+              <td style="font-weight: bold;">Total Absensi</td>
+              <td>:</td>
+              <td><strong>${totalAbsen} Hari</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold;">Status Home Visit</td>
+              <td>:</td>
+              <td colspan="4">${std.homeVisit ? 'Sudah Dilaksanakan Kunjungan Rumah' : 'Belum Dilaksanakan'} (Total Panggilan: ${std.calls || 0}x)</td>
+            </tr>
+          </table>
+
+          <!-- Tabel Riwayat Kasus -->
+          <div style="margin-bottom: 18px;">
+            <h5 style="margin: 0 0 6px 0; font-size: 11pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">A. Catatan Kasus & Penanganan Bimbingan Konseling</h5>
+            <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt;" border="1" cellpadding="6">
+              <thead>
+                <tr style="background-color: #f2f2f2; text-align: left;">
+                  <th style="width: 5%; text-align: center;">No</th>
+                  <th style="width: 18%;">Tanggal</th>
+                  <th style="width: 42%;">Uraian Kasus / Masalah</th>
+                  <th style="width: 35%;">Tindak Lanjut & Solusi BK</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredCases.length === 0 ? `
+                  <tr><td colspan="4" style="text-align: center; color: #777; padding: 12px;">Tidak ada catatan kasus pada periode ini.</td></tr>
+                ` : filteredCases.map((c, i) => `
+                  <tr>
+                    <td style="text-align: center;">${i + 1}</td>
+                    <td>${c.date}</td>
+                    <td>${escapeHtml(c.description)}</td>
+                    <td>${escapeHtml(c.action || '-')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Tabel Riwayat & Hasil Pemanggilan -->
+          <div style="margin-bottom: 24px;">
+            <h5 style="margin: 0 0 6px 0; font-size: 11pt; border-bottom: 1px solid #ccc; padding-bottom: 3px;">B. Riwayat & Hasil Pemanggilan Siswa / Orang Tua</h5>
+            <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt;" border="1" cellpadding="6">
+              <thead>
+                <tr style="background-color: #f2f2f2; text-align: left;">
+                  <th style="width: 5%; text-align: center;">No</th>
+                  <th style="width: 15%;">Tanggal</th>
+                  <th style="width: 20%;">Pihak Dipanggil</th>
+                  <th style="width: 25%;">Alasan Pemanggilan</th>
+                  <th style="width: 35%;">Hasil Pemanggilan & Kesepakatan</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredCallLogs.length === 0 ? `
+                  <tr><td colspan="5" style="text-align: center; color: #777; padding: 12px;">Tidak ada pemanggilan pada periode ini.</td></tr>
+                ` : filteredCallLogs.map((log, i) => `
+                  <tr>
+                    <td style="text-align: center;">${i + 1}</td>
+                    <td>${log.date}</td>
+                    <td>${escapeHtml(log.target)}</td>
+                    <td>${escapeHtml(log.reason)}</td>
+                    <td>${escapeHtml(log.result)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Kolom Tanda Tangan Formal -->
+          <table style="width: 100%; font-size: 10pt; margin-top: 30px; border-collapse: collapse;">
+            <tr>
+              <td style="width: 50%; text-align: center;">
+                Mengetahui,<br>
+                Kepala MTsN Landak
+                <br><br><br><br>
+                <strong>( ____________________________ )</strong><br>
+                NIP.
+              </td>
+              <td style="width: 50%; text-align: center;">
+                Ngabang, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>
+                Guru Bimbingan Konseling (BK)
+                <br><br><br><br>
+                <strong>( ____________________________ )</strong><br>
+                NIP.
+              </td>
+            </tr>
+          </table>
+        </div>
+      `;
+
+      closePrintOptionModal();
+      printArea.classList.remove("hidden");
+      
+      // Jalankan print browser (dapat dipilih 'Save as PDF' di browser)
+      window.print();
+      
+      // Kembalikan status
+      setTimeout(() => {
+        printArea.classList.add("hidden");
+      }, 1000);
     }
 
     // Render Berkas Home Visit Siswa
